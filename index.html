@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广东去哪儿玩？- 疯狂动物城特别版</title>
+    
+    <!-- 1. 样式框架 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. 庆祝特效库 (更换为 360 奇舞团 CDN，国内更稳定) -->
+    <script src="https://lib.baomitu.com/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    
+    <style>
+        /* 字体设置 */
+        body {
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%); /* 浅蓝清爽背景 */
+            min-height: 100vh;
+        }
+        
+        .card-shadow {
+            box-shadow: 0 20px 40px -5px rgba(59, 130, 246, 0.15);
+        }
+
+        /* 结果展示动画 */
+        @keyframes popIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* 旋转时的模糊效果 */
+        .spinning-text {
+            filter: blur(2px);
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 text-slate-800">
+
+    <main class="w-full max-w-md bg-white rounded-3xl card-shadow overflow-hidden border-2 border-indigo-50 relative">
+        
+        <!-- 头部图片：固定为疯狂动物城 -->
+        <div class="relative w-full h-64 overflow-hidden group">
+            <!-- 
+               这里使用了 wsrv.nl 代理加速一张高清的朱迪和尼克图片 
+               如果想换成本地图片，将 src 改为 "images/zootopia.jpg" 即可
+            -->
+            <img src="https://wsrv.nl/?url=images5.alphacoders.com/689/689369.jpg&w=800&h=500&fit=cover&a=center&output=webp" 
+                 alt="Zootopia" 
+                 class="w-full h-full object-cover transform transition duration-700 hover:scale-105">
+            
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+            
+            <!-- 标题文字浮在图片上 -->
+            <div class="absolute bottom-4 left-4 text-white">
+                <h1 class="text-2xl font-black tracking-wider text-yellow-300 drop-shadow-md">广东去哪儿玩？</h1>
+                <p class="text-sm font-medium opacity-90">朱迪 & 尼克带你游遍岭南</p>
+            </div>
+        </div>
+
+        <!-- 结果展示区域 -->
+        <div id="result-area" class="p-6 text-center min-h-[360px] flex flex-col justify-start items-center transition-all duration-300 relative">
+            
+            <!-- 装饰背景图标 -->
+            <div class="absolute top-10 opacity-5 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-64 w-64" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                </svg>
+            </div>
+
+            <!-- 初始等待状态 -->
+            <div id="placeholder-content" class="py-12 z-10">
+                <div class="inline-block p-4 rounded-full bg-blue-50 mb-4 animate-bounce">
+                    <span class="text-4xl">🎲</span>
+                </div>
+                <p class="text-xl font-bold text-slate-700">准备好出发了吗？</p>
+                <p class="text-slate-400 text-sm mt-2">点击按钮，抽取你的专属目的地</p>
+            </div>
+
+            <!-- 抽奖结果内容 (初始隐藏) -->
+            <div id="city-content" class="hidden w-full z-10 text-left">
+                <!-- 城市名 -->
+                <div class="text-center mb-6">
+                    <span class="inline-block px-3 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full mb-2 uppercase tracking-wide">Destinations</span>
+                    <h2 id="city-name" class="text-5xl font-black text-indigo-600 mb-2 drop-shadow-sm">城市名</h2>
+                    <p id="city-slogan" class="text-slate-500 font-medium italic">这里是城市标语</p>
+                </div>
+                
+                <!-- 详情卡片 -->
+                <div class="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100 space-y-4">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xl">🎡</span>
+                            <span class="font-bold text-indigo-900 text-sm">朱迪推荐景点</span>
+                        </div>
+                        <p id="city-spots" class="text-slate-700 text-sm leading-relaxed pl-8">景点列表...</p>
+                    </div>
+                    <div class="border-t border-indigo-100 pt-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xl">🥕</span>
+                            <span class="font-bold text-indigo-900 text-sm">尼克推荐美食</span>
+                        </div>
+                        <p id="city-food" class="text-slate-700 text-sm leading-relaxed pl-8">美食列表...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 按钮区域 -->
+        <div class="p-5 bg-white border-t border-slate-100 z-20 relative">
+            <button id="action-btn" onclick="toggleSpin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-blue-200 shadow-lg transform transition active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center gap-2">
+                <span id="btn-icon" class="text-xl">🚀</span>
+                <span id="btn-text" class="text-lg tracking-wide">开始随机抽取</span>
+            </button>
+        </div>
+
+    </main>
+    
+    <footer class="mt-6 text-slate-400 text-xs font-medium">
+        &copy; 2024 Zootopia Travel Agency
+    </footer>
+
+    <script>
+        // 删除了所有图片字段，只保留纯文本数据
+        const cities = [
+            { name: "广州", slogan: "羊城 / 叹早茶", spots: "广州塔、永庆坊、长隆、陈家祠", food: "虾饺、干炒牛河、艇仔粥、烧鹅" },
+            { name: "深圳", slogan: "科技之都 / 搞钱圣地", spots: "深圳湾公园、世界之窗、大梅沙", food: "椰子鸡、猪脚饭、光明乳鸽" },
+            { name: "珠海", slogan: "百岛之市 / 浪漫海岸", spots: "情侣路、长隆海洋王国、珠海渔女", food: "横琴蚝、白切鸡、海鲜大餐" },
+            { name: "汕头", slogan: "美食孤岛 / 牛肉火锅", spots: "南澳岛、小公园、汕头大学", food: "牛肉丸火锅、生腌、蚝烙、卤鹅" },
+            { name: "佛山", slogan: "功夫之城 / 寻味顺德", spots: "祖庙、清晖园、顺德欢乐海岸", food: "双皮奶、陈村粉、鱼生、伦教糕" },
+            { name: "惠州", slogan: "半城山色半城湖", spots: "惠州西湖、双月湾、巽寮湾", food: "客家酿豆腐、梅菜扣肉、盐焗鸡" },
+            { name: "东莞", slogan: "世界工厂 / 潮流之都", spots: "松山湖、可园、下坝坊", food: "烧鹅濑粉、道滘肉丸" },
+            { name: "中山", slogan: "伟人故里 / 悠闲慢城", spots: "孙中山故居、孙文西路、摩天轮", food: "石岐乳鸽、脆肉鲩、杏仁饼" },
+            { name: "江门", slogan: "狂飙拍摄地 / 碉楼之乡", spots: "开平碉楼、赤坎古镇、三十三墟街", food: "陈皮鸭、黄鳝饭、古井烧鹅" },
+            { name: "潮州", slogan: "古城韵味 / 工夫茶", spots: "广济桥、牌坊街、韩文公祠", food: "牛肉火锅、鸭母捻、腐乳饼" },
+            { name: "湛江", slogan: "隐秘的角落 / 海鲜之都", spots: "金沙湾、赤坎老街、湖光岩", food: "湛江生蚝、白切鸡、沙虫粥" },
+            { name: "肇庆", slogan: "岭南山水 / 砚都", spots: "七星岩、鼎湖山、宋城墙", food: "裹蒸粽、文庆鲤、豆腐花" },
+            { name: "茂名", slogan: "滨海绿城 / 荔枝之乡", spots: "中国第一滩、放鸡岛、浪漫海岸", food: "化州糖水、水东鸭粥、捞粉" },
+            { name: "梅州", slogan: "世界客都 / 长寿之乡", spots: "客天下、雁南飞、千佛塔", food: "客家腌面、盐焗鸡、开锅肉丸" },
+            { name: "韶关", slogan: "丹霞地貌 / 禅宗祖庭", spots: "丹霞山、南华寺、珠玑古巷", food: "酸笋鸭、大塘扣肉、油罩糍" },
+            { name: "河源", slogan: "万绿之都 / 恐龙故乡", spots: "万绿湖、巴伐利亚庄园", food: "东江酿豆腐、猪脚粉、五指毛桃汤" },
+            { name: "阳江", slogan: "南海一号 / 风筝之乡", spots: "海陵岛、十里银滩、大角湾", food: "猪肠碌、程村蚝、海胆饭" },
+            { name: "清远", slogan: "漂流之乡 / 温泉之城", spots: "古龙峡漂流、连州地下河", food: "清远鸡、刀切糍、北江河鲜" },
+            { name: "汕尾", slogan: "海滨邹鲁 / 红色圣地", spots: "红海湾、金町湾、玄武山", food: "小米、菜茶、薄饼、海鲜" },
+            { name: "揭阳", slogan: "岭南水城 / 玉都", spots: "揭阳楼、进贤门、黄岐山", food: "粿汁、乒乓粿、反沙芋" },
+            { name: "云浮", slogan: "禅宗故里 / 石都", spots: "国恩寺、天露山、蟠龙洞", food: "罗定皱纱鱼腐、新兴裹蒸粽" }
+        ];
+
+        let timer = null;
+        let isSpinning = false;
+
+        const btn = document.getElementById('action-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnIcon = document.getElementById('btn-icon');
+        const placeholder = document.getElementById('placeholder-content');
+        const cityContent = document.getElementById('city-content');
+        
+        const domName = document.getElementById('city-name');
+        const domSlogan = document.getElementById('city-slogan');
+        const domSpots = document.getElementById('city-spots');
+        const domFood = document.getElementById('city-food');
+
+        function toggleSpin() {
+            if (isSpinning) {
+                stopSpin();
+            } else {
+                startSpin();
+            }
+        }
+
+        function startSpin() {
+            isSpinning = true;
+            // 按钮变红
+            btn.classList.add('bg-red-500', 'hover:bg-red-600', 'ring-red-300');
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'ring-blue-300');
+            btnText.innerText = "停止抽取";
+            btnIcon.innerText = "🛑";
+            
+            placeholder.classList.add('hidden');
+            cityContent.classList.remove('hidden', 'animate-pop');
+            
+            // 给文字加模糊特效，模拟快速滚动
+            cityContent.classList.add('spinning-text');
+
+            timer = setInterval(() => {
+                const randomCity = cities[Math.floor(Math.random() * cities.length)];
+                updateDisplay(randomCity);
+            }, 50); 
+        }
+
+        function stopSpin() {
+            isSpinning = false;
+            clearInterval(timer);
+
+            // 按钮变回蓝色
+            btn.classList.remove('bg-red-500', 'hover:bg-red-600', 'ring-red-300');
+            btn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'ring-blue-300');
+            btnText.innerText = "再抽一次";
+            btnIcon.innerText = "🔄";
+            
+            // 移除模糊，播放弹入动画
+            cityContent.classList.remove('spinning-text');
+            void cityContent.offsetWidth; // 强制重绘
+            cityContent.classList.add('animate-pop');
+
+            triggerConfetti();
+        }
+
+        function updateDisplay(city) {
+            domName.innerText = city.name;
+            domSlogan.innerText = city.slogan;
+            domSpots.innerText = city.spots;
+            domFood.innerText = city.food;
+        }
+
+        function triggerConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            // 关键修改：将 zIndex 提高到 999，确保在所有元素之上
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999 };
+
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+                var particleCount = 50 * (timeLeft / duration);
+                
+                // 缤纷色彩的纸屑
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+                    colors: ['#3b82f6', '#fbbf24', '#f87171', '#34d399'] 
+                }));
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+                    colors: ['#3b82f6', '#fbbf24', '#f87171', '#34d399']
+                }));
+            }, 250);
+        }
+    </script>
+</body>
+</html>
