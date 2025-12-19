@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>瑶瑶去哪儿玩？(广东版)</title>
+
+  <!-- 1) Tailwind（CDN） -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 2) 庆祝特效库 -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body{
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+      min-height: 100vh;
+    }
+
+    .card-shadow{
+      box-shadow: 0 20px 40px -5px rgba(59,130,246,.15);
+    }
+
+    /* 结果展示动画 */
+    @keyframes popIn{
+      0%{ transform: scale(.92); opacity: 0; }
+      100%{ transform: scale(1); opacity: 1; }
+    }
+    .animate-pop{
+      animation: popIn .45s cubic-bezier(.175,.885,.32,1.275) forwards;
+    }
+
+    /* 旋转时的模糊效果 */
+    .spinning-text{
+      filter: blur(2px);
+      opacity: .75;
+    }
+  </style>
+</head>
+
+<body class="flex flex-col items-center justify-center min-h-screen p-4 text-slate-800">
+
+  <main class="w-full max-w-md bg-white rounded-3xl card-shadow overflow-hidden border-2 border-indigo-50 relative">
+
+    <!-- 顶部图片 -->
+    <div class="relative w-full h-64 overflow-hidden group">
+      <!-- 外链示例：如果网络源站限制，可能不显示 -->
+      <img
+        src="https://picx.zhimg.com/100/v2-4209022bcb7836a02cf85a79bc37fa0f_r.jpg"
+        class="w-full h-full object-cover transform transition duration-700 hover:scale-105"
+        onerror="this.onerror=null; this.src='images/hero.jpg';"
+        alt="header"
+      />
+
+      <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+
+      <div class="absolute bottom-4 left-4 text-white">
+        <h1 class="text-2xl font-black tracking-wider text-yellow-300 drop-shadow-md">瑶瑶去哪儿玩？(广东版)</h1>
+        <p class="text-sm font-medium opacity-90">盲盒抽取目的地 · 惊喜开启新旅程</p>
+      </div>
+    </div>
+
+    <!-- 结果展示区域 -->
+    <div id="result-area" class="p-6 text-center min-h-[360px] flex flex-col justify-start items-center transition-all duration-300 relative">
+
+      <!-- 装饰背景图标 -->
+      <div class="absolute top-10 opacity-5 pointer-events-none">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-64 w-64" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+        </svg>
+      </div>
+
+      <!-- 初始等待状态 -->
+      <div id="placeholder-content" class="py-12 z-10">
+        <div class="inline-block p-4 rounded-full bg-blue-50 mb-4 animate-bounce">
+          <span class="text-4xl">🎲</span>
+        </div>
+        <p class="text-xl font-bold text-slate-700">准备好出发了吗？</p>
+        <p class="text-slate-400 text-sm mt-2">点击按钮开始滚动，再点一次停止抽取</p>
+      </div>
+
+      <!-- 抽奖结果内容（初始隐藏） -->
+      <div id="city-content" class="hidden w-full z-10 text-left">
+        <div class="text-center mb-6">
+          <span class="inline-block px-3 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full mb-2 uppercase tracking-wide">
+            DESTINATION
+          </span>
+          <h2 id="city-name" class="text-5xl font-black text-indigo-600 mb-2 drop-shadow-sm">城市名</h2>
+          <p id="city-slogan" class="text-slate-500 font-medium italic">这里是城市标语</p>
+        </div>
+
+        <div class="bg-indigo-50/50 rounded-2xl p-5 border border-indigo-100 space-y-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xl">🎡</span>
+              <span class="font-bold text-indigo-900 text-sm">推荐好玩点</span>
+            </div>
+            <p id="city-spots" class="text-slate-700 text-sm leading-relaxed pl-8">景点列表...</p>
+          </div>
+
+          <div class="border-t border-indigo-100 pt-3">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xl">🥕</span>
+              <span class="font-bold text-indigo-900 text-sm">推荐美食</span>
+            </div>
+            <p id="city-food" class="text-slate-700 text-sm leading-relaxed pl-8">美食列表...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 单按钮区域 -->
+    <div class="p-5 bg-white border-t border-slate-100 z-20 relative">
+      <button id="action-btn"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-blue-200 shadow-lg transform transition active:scale-95 focus:outline-none focus:ring-4 focus:ring-blue-300 flex items-center justify-center gap-2"
+      >
+        <span id="btn-icon" class="text-xl">🚀</span>
+        <span id="btn-text" class="text-lg tracking-wide">开始随机抽取</span>
+      </button>
+    </div>
+  </main>
+
+  <footer class="mt-6 text-slate-400 text-xs font-medium">
+    &copy; 2025 QIUCHENG
+  </footer>
+
+  <script>
+    // 城市数据（纯文本）
+    const cities = [
+      { name:"广州", slogan:"羊城 / 叹早茶", spots:"广州塔、永庆坊、长隆、陈家祠", food:"虾饺、干炒牛河、艇仔粥、烧鹅" },
+      { name:"深圳", slogan:"科技之都 / 海边也很会玩", spots:"深圳湾公园、华侨城创意园、大鹏半岛", food:"椰子鸡、潮汕牛肉火锅、烧腊" },
+      { name:"珠海", slogan:"百岛之市 / 浪漫海岸", spots:"情侣路、日月贝、长隆海洋王国", food:"横琴蚝、海鲜大餐、糖水" },
+      { name:"汕头", slogan:"美食高密度 / 逛吃天堂", spots:"南澳岛、小公园骑楼、海滨长廊", food:"牛肉火锅、生腌、蚝烙、卤鹅" },
+      { name:"佛山", slogan:"功夫之城 / 寻味顺德", spots:"祖庙、岭南天地、清晖园", food:"双皮奶、陈村粉、鱼生、伦教糕" },
+      { name:"惠州", slogan:"半城山色半城湖", spots:"惠州西湖、巽寮湾、双月湾", food:"客家酿豆腐、梅菜扣肉、盐焗鸡" },
+      { name:"东莞", slogan:"轻户外也很爽", spots:"松山湖、可园、下坝坊", food:"烧鹅濑粉、道滘肉丸、糖水" },
+      { name:"中山", slogan:"伟人故里 / 悠闲慢城", spots:"孙中山故居、孙文西路、岐江夜景", food:"石岐乳鸽、脆肉鲩、杏仁饼" },
+      { name:"江门", slogan:"侨乡风情 / 碉楼出片", spots:"开平碉楼、赤坎古镇、三十三墟街", food:"陈皮鸭、黄鳝饭、古井烧鹅" },
+      { name:"潮州", slogan:"古城韵味 / 工夫茶", spots:"广济桥、牌坊街、韩文公祠", food:"卤味、砂锅粥、鸭母捻" },
+      { name:"湛江", slogan:"海风大排档 / 海鲜之都", spots:"金沙湾、赤坎老街、湖光岩", food:"生蚝、白切鸡、沙虫粥" },
+      { name:"肇庆", slogan:"岭南山水 / 砚都", spots:"七星岩、鼎湖山、宋城墙", food:"裹蒸粽、河鲜、豆腐花" },
+      { name:"茂名", slogan:"滨海绿城 / 荔枝之乡", spots:"中国第一滩、放鸡岛、浪漫海岸", food:"化州糖水、水东鸭粥、捞粉" },
+      { name:"梅州", slogan:"世界客都 / 低调好吃", spots:"客天下、雁南飞、围龙屋", food:"客家腌面、盐焗鸡、酿豆腐" },
+      { name:"韶关", slogan:"丹霞地貌 / 山水禅意", spots:"丹霞山、南华寺、珠玑古巷", food:"酸笋鸭、大塘扣肉、油罩糍" },
+      { name:"河源", slogan:"万绿之都 / 亲水慢游", spots:"万绿湖、巴伐利亚庄园", food:"东江酿豆腐、猪脚粉、五指毛桃汤" },
+      { name:"阳江", slogan:"海陵岛 / 看日落", spots:"海陵岛、十里银滩、大角湾", food:"猪肠碌、程村蚝、海胆饭" },
+      { name:"清远", slogan:"漂流之乡 / 温泉之城", spots:"古龙峡漂流、英西峰林、连州地下河", food:"清远鸡、北江河鲜、刀切糍" },
+      { name:"汕尾", slogan:"海边发呆 / 松弛感", spots:"红海湾、金町湾、玄武山", food:"海鲜、菜茶、薄饼" },
+      { name:"揭阳", slogan:"岭南水城 / 玉都", spots:"揭阳楼、进贤门、黄岐山", food:"粿汁、乒乓粿、反沙芋" },
+      { name:"云浮", slogan:"禅宗故里 / 石都", spots:"国恩寺、天露山、蟠龙洞", food:"皱纱鱼腐、裹蒸粽、农家菜" }
+    ];
+
+    // DOM
+    const btn = document.getElementById('action-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnIcon = document.getElementById('btn-icon');
+    const placeholder = document.getElementById('placeholder-content');
+    const cityContent = document.getElementById('city-content');
+
+    const domName = document.getElementById('city-name');
+    const domSlogan = document.getElementById('city-slogan');
+    const domSpots = document.getElementById('city-spots');
+    const domFood = document.getElementById('city-food');
+
+    // 状态
+    let timer = null;
+    let isSpinning = false;
+    let isStopping = false;
+
+    function pickRandom(){
+      return cities[Math.floor(Math.random() * cities.length)];
+    }
+
+    function updateDisplay(city){
+      domName.innerText = city.name;
+      domSlogan.innerText = city.slogan;
+      domSpots.innerText = city.spots;
+      domFood.innerText = city.food;
+    }
+
+    function setBtnToStop(){
+      btn.classList.add('bg-red-500', 'hover:bg-red-600', 'ring-red-300');
+      btn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'ring-blue-300');
+      btnText.innerText = "停止抽取";
+      btnIcon.innerText = "🛑";
+    }
+
+    function setBtnToAgain(){
+      btn.classList.remove('bg-red-500', 'hover:bg-red-600', 'ring-red-300');
+      btn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'ring-blue-300');
+      btnText.innerText = "再抽一次";
+      btnIcon.innerText = "🔄";
+    }
+
+    function startSpin(){
+      isSpinning = true;
+      isStopping = false;
+
+      setBtnToStop();
+
+      placeholder.classList.add('hidden');
+      cityContent.classList.remove('hidden', 'animate-pop');
+
+      // 模糊滚动
+      cityContent.classList.add('spinning-text');
+
+      if (timer) clearInterval(timer);
+      timer = setInterval(() => {
+        updateDisplay(pickRandom());
+      }, 50);
+    }
+
+    // ✅ 更短的减速停下（优化：减少步数 + 缩短总时长）
+    function stopSpin(){
+      if (!isSpinning || isStopping) return;
+      isStopping = true;
+
+      clearInterval(timer);
+      timer = null;
+
+      // ✅ 这里是你要的方案：更短、更利落
+      const steps = [55, 75, 110, 160];
+      let i = 0;
+
+      function slowTick(){
+        updateDisplay(pickRandom());
+        if (i < steps.length - 1){
+          i++;
+          setTimeout(slowTick, steps[i]);
+        } else {
+          finalizeStop();
+        }
+      }
+
+      setTimeout(slowTick, steps[0]);
+    }
+
+    function finalizeStop(){
+      isSpinning = false;
+      isStopping = false;
+
+      // 最终结果再随机一次（更像开奖）
+      updateDisplay(pickRandom());
+
+      setBtnToAgain();
+
+      // 去模糊 + 弹入
+      cityContent.classList.remove('spinning-text');
+      void cityContent.offsetWidth;
+      cityContent.classList.add('animate-pop');
+
+      // ✅ 防护：confetti 加载失败也不影响主功能
+      if (typeof confetti === "function") triggerConfetti();
+      else console.warn("confetti 未加载成功：请检查网络/CDN。");
+    }
+
+    function toggleSpin(){
+      if (isSpinning) stopSpin();
+      else startSpin();
+    }
+
+    function triggerConfetti(){
+      const duration = 2200;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999 };
+
+      function randomInRange(min, max){ return Math.random() * (max - min) + min; }
+
+      const interval = setInterval(() => {
+        const timeLeft = animationEnd - Date.now();
+        if (timeLeft <= 0) return clearInterval(interval);
+
+        const particleCount = 60 * (timeLeft / duration);
+
+        confetti(Object.assign({}, defaults, {
+          particleCount,
+          origin: { x: randomInRange(0.10, 0.30), y: Math.random() - 0.2 },
+          colors: ['#3b82f6', '#fbbf24', '#f87171', '#34d399']
+        }));
+        confetti(Object.assign({}, defaults, {
+          particleCount,
+          origin: { x: randomInRange(0.70, 0.90), y: Math.random() - 0.2 },
+          colors: ['#3b82f6', '#fbbf24', '#f87171', '#34d399']
+        }));
+      }, 220);
+    }
+
+    btn.addEventListener('click', toggleSpin);
+  </script>
+</body>
+</html>
